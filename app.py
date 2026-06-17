@@ -24,17 +24,17 @@ st.set_page_config(
 # ── Load models ───────────────────────────────────────────────
 @st.cache_resource
 def load_models():
-    with open('data/model_home.pkl', 'rb') as f:
+    with open('model_home.pkl', 'rb') as f:
         model_home = pickle.load(f)
-    with open('data/model_away.pkl', 'rb') as f:
+    with open('model_away.pkl', 'rb') as f:
         model_away = pickle.load(f)
-    with open('data/scaler.pkl', 'rb') as f:
+    with open('scaler.pkl', 'rb') as f:
         scaler = pickle.load(f)
     return model_home, model_away, scaler
 
 @st.cache_data
 def load_team_strength():
-    return pd.read_csv('data/team_strength_2026.csv')
+    return pd.read_csv('team_strength_2026.csv')
 
 model_home, model_away, scaler = load_models()
 team_strength_df = load_team_strength()
