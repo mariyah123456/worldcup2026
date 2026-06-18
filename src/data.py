@@ -1,65 +1,63 @@
 import pandas as pd
 import streamlit as st
 import urllib.request
-import urllib.error
+import urllib.parse
 import json
 
 
 def get_credentials():
-    url = str(st.secrets["SUPABASE_URL"]).strip()
-    key = str(st.secrets["SUPABASE_KEY"]).strip()
-    return url, key
+    bin_id = st.secrets["JSONBIN_BIN_ID"]
+    api_key = st.secrets["JSONBIN_API_KEY"]
+    return bin_id, api_key
 
 
 def load_results():
     try:
-        url, key = get_credentials()
-        endpoint = f"{url}/rest/v1/results?select=*"
+        bin_id, api_key = get_credentials()
+        url = f"https://api.jsonbin.io/v3/b/{bin_id}/latest"
         req = urllib.request.Request(
-            endpoint,
+            url,
             headers={
-                "apikey": key,
-                "Authorization": f"Bearer {key}",
-                "Content-Type": "application/json"
+                "X-Master-Key": api_key,
+                "X-Bin-Meta": "false"
             }
         )
         with urllib.request.urlopen(req) as response:
-            data = json.loads(response.read().decode("utf-8"))
-        results = {}
-        for row in data:
-            k = f"{row['home_team']}_vs_{row['away_team']}"
-            results[k] = {
-                'home_team' : row['home_team'],
-                'away_team' : row['away_team'],
-                'home_score': row['home_score'],
-                'away_score': row['away_score'],
-            }
-        return results
+            data = json.loads(
+                response.read().decode("utf-8"))
+        return data if isinstance(data, dict) else {}
     except Exception as e:
         st.error(f"Error loading results: {e}")
         return {}
 
 
-def save_result(home_team, away_team, home_score, away_score):
+def save_result(home_team, away_team,
+                home_score, away_score):
     try:
-        url, key = get_credentials()
-        endpoint = f"{url}/rest/v1/results"
-        payload = json.dumps({
+        # Load current results
+        results = load_results()
+
+        # Add new result
+        key = f"{home_team}_vs_{away_team}"
+        results[key] = {
             'home_team' : home_team,
             'away_team' : away_team,
             'home_score': int(home_score),
             'away_score': int(away_score),
-        }).encode("utf-8")
+        }
+
+        # Save back
+        bin_id, api_key = get_credentials()
+        url = f"https://api.jsonbin.io/v3/b/{bin_id}"
+        payload = json.dumps(results).encode("utf-8")
         req = urllib.request.Request(
-            endpoint,
+            url,
             data=payload,
             headers={
-                "apikey": key,
-                "Authorization": f"Bearer {key}",
-                "Content-Type": "application/json",
-                "Prefer": "resolution=merge-duplicates"
+                "X-Master-Key": api_key,
+                "Content-Type": "application/json"
             },
-            method="POST"
+            method="PUT"
         )
         with urllib.request.urlopen(req) as response:
             return True
@@ -70,19 +68,22 @@ def save_result(home_team, away_team, home_score, away_score):
 
 def delete_result(home_team, away_team):
     try:
-        url, key = get_credentials()
-        endpoint = (f"{url}/rest/v1/results"
-                    f"?home_team=eq.{urllib.parse.quote(home_team)}"
-                    f"&away_team=eq.{urllib.parse.quote(away_team)}")
-        import urllib.parse
+        results = load_results()
+        key = f"{home_team}_vs_{away_team}"
+        if key in results:
+            del results[key]
+
+        bin_id, api_key = get_credentials()
+        url = f"https://api.jsonbin.io/v3/b/{bin_id}"
+        payload = json.dumps(results).encode("utf-8")
         req = urllib.request.Request(
-            endpoint,
+            url,
+            data=payload,
             headers={
-                "apikey": key,
-                "Authorization": f"Bearer {key}",
+                "X-Master-Key": api_key,
                 "Content-Type": "application/json"
             },
-            method="DELETE"
+            method="PUT"
         )
         with urllib.request.urlopen(req) as response:
             return True
@@ -122,7 +123,8 @@ def get_group_standings(live_results, groups):
 
         df = pd.DataFrame(table).T
         df['GD'] = df['GF'] - df['GA']
-        df = df.sort_values(['Pts','GD','GF'], ascending=False)
+        df = df.sort_values(['Pts','GD','GF'],
+                            ascending=False)
         all_standings[group] = df
 
     return all_standings
