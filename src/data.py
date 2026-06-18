@@ -1,29 +1,34 @@
 import pandas as pd
 import streamlit as st
+import urllib.request
+import urllib.error
+import json
 
 
-@st.cache_resource
-def get_supabase():
-    try:
-        from supabase import create_client
-        url = str(st.secrets["SUPABASE_URL"]).strip()
-        key = str(st.secrets["SUPABASE_KEY"]).strip()
-        return create_client(url, key)
-    except Exception as e:
-        st.error(f"Supabase connection error: {e}")
-        return None
+def get_credentials():
+    url = str(st.secrets["SUPABASE_URL"]).strip()
+    key = str(st.secrets["SUPABASE_KEY"]).strip()
+    return url, key
 
 
 def load_results():
     try:
-        sb = get_supabase()
-        if sb is None:
-            return {}
-        response = sb.table('results').select('*').execute()
+        url, key = get_credentials()
+        endpoint = f"{url}/rest/v1/results?select=*"
+        req = urllib.request.Request(
+            endpoint,
+            headers={
+                "apikey": key,
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json"
+            }
+        )
+        with urllib.request.urlopen(req) as response:
+            data = json.loads(response.read().decode("utf-8"))
         results = {}
-        for row in response.data:
-            key = f"{row['home_team']}_vs_{row['away_team']}"
-            results[key] = {
+        for row in data:
+            k = f"{row['home_team']}_vs_{row['away_team']}"
+            results[k] = {
                 'home_team' : row['home_team'],
                 'away_team' : row['away_team'],
                 'home_score': row['home_score'],
@@ -37,16 +42,27 @@ def load_results():
 
 def save_result(home_team, away_team, home_score, away_score):
     try:
-        sb = get_supabase()
-        if sb is None:
-            return False
-        sb.table('results').upsert({
+        url, key = get_credentials()
+        endpoint = f"{url}/rest/v1/results"
+        payload = json.dumps({
             'home_team' : home_team,
             'away_team' : away_team,
             'home_score': int(home_score),
             'away_score': int(away_score),
-        }).execute()
-        return True
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            endpoint,
+            data=payload,
+            headers={
+                "apikey": key,
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json",
+                "Prefer": "resolution=merge-duplicates"
+            },
+            method="POST"
+        )
+        with urllib.request.urlopen(req) as response:
+            return True
     except Exception as e:
         st.error(f"Error saving result: {e}")
         return False
@@ -54,15 +70,22 @@ def save_result(home_team, away_team, home_score, away_score):
 
 def delete_result(home_team, away_team):
     try:
-        sb = get_supabase()
-        if sb is None:
-            return False
-        sb.table('results')\
-          .delete()\
-          .eq('home_team', home_team)\
-          .eq('away_team', away_team)\
-          .execute()
-        return True
+        url, key = get_credentials()
+        endpoint = (f"{url}/rest/v1/results"
+                    f"?home_team=eq.{urllib.parse.quote(home_team)}"
+                    f"&away_team=eq.{urllib.parse.quote(away_team)}")
+        import urllib.parse
+        req = urllib.request.Request(
+            endpoint,
+            headers={
+                "apikey": key,
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json"
+            },
+            method="DELETE"
+        )
+        with urllib.request.urlopen(req) as response:
+            return True
     except Exception as e:
         st.error(f"Error deleting result: {e}")
         return False
