@@ -246,3 +246,74 @@ elif page == "⚽ Enter Scores":
     try:
         if 'admin_auth' not in st.session_state:
             st.session_state.admin_auth = False
+
+        if not st.session_state.admin_auth:
+            pwd = st.text_input("Enter admin password", type="password")
+            if st.button("Login"):
+                if pwd == st.secrets.get("ADMIN_PASSWORD", "worldcup2026"):
+                    st.session_state.admin_auth = True
+                    st.rerun()
+                else:
+                    st.error("Incorrect password")
+        else:
+            st.success("✓ Logged in as admin")
+            st.markdown("### Add / Update Result")
+            c1, c2 = st.columns(2)
+            with c1:
+                home = st.selectbox("Home Team", ALL_TEAMS,
+                                    key="entry_home")
+                home_goals = st.number_input(
+                    "Home Goals", min_value=0, max_value=20, value=0)
+            with c2:
+                away = st.selectbox("Away Team", ALL_TEAMS,
+                                    key="entry_away", index=1)
+                away_goals = st.number_input(
+                    "Away Goals", min_value=0, max_value=20, value=0)
+
+            if st.button("💾 Save Result", type="primary",
+                         use_container_width=True):
+                if home == away:
+                    st.error("Home and away must be different!")
+                else:
+                    if save_result(home, away, home_goals, away_goals):
+                        st.session_state.results = load_results()
+                        st.success(
+                            f"✓ Saved: {home} {home_goals}-{away_goals} {away}"
+                        )
+                        st.rerun()
+
+            st.markdown("---")
+            st.markdown("### Results Entered")
+            if live_results:
+                for key, r in live_results.items():
+                    col1, col2 = st.columns([4, 1])
+                    with col1:
+                        hg = r['home_score']
+                        ag = r['away_score']
+                        result_str = (
+                            "🟢 HOME" if hg > ag else
+                            "🔴 AWAY" if hg < ag else
+                            "🟡 DRAW"
+                        )
+                        st.markdown(
+                            f"{get_flag(r['home_team'])} "
+                            f"**{r['home_team']}** "
+                            f"{hg}–{ag} "
+                            f"**{r['away_team']}** "
+                            f"{get_flag(r['away_team'])} "
+                            f"— {result_str}"
+                        )
+                    with col2:
+                        if st.button("🗑️", key=f"del_{key}"):
+                            delete_result(r['home_team'],
+                                          r['away_team'])
+                            st.session_state.results = load_results()
+                            st.rerun()
+            else:
+                st.info("No results entered yet.")
+
+            if st.button("🚪 Logout"):
+                st.session_state.admin_auth = False
+                st.rerun()
+    except Exception as e:
+        st.error(f"Error: {e}")
