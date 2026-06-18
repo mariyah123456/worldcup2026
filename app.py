@@ -108,3 +108,141 @@ if page == "🏆 Predictions":
         use_container_width=True,
         height=600
     )
+# ══════════════════════════════════════════════════════════════
+# PAGE 2 — GROUP STANDINGS
+# ══════════════════════════════════════════════════════════════
+elif page == "📊 Group Standings":
+    st.title("📊 Group Stage Standings")
+    st.markdown(f"*{len(live_results)} matches played*")
+    try:
+        standings = get_group_standings(live_results, GROUPS)
+        groups_list = list(standings.items())
+        for i in range(0, len(groups_list), 2):
+            col1, col2 = st.columns(2)
+            for col, (group, df) in zip(
+                    [col1, col2], groups_list[i:i+2]):
+                with col:
+                    st.markdown(f"### Group {group}")
+                    display = df.copy()
+                    display.index = display.index.map(
+                        lambda t: f"{get_flag(t)} {t}"
+                    )
+                    display['GD'] = display['GD'].apply(
+                        lambda x: f"+{int(x)}" if x > 0
+                        else str(int(x))
+                    )
+                    display = display[['Pts','W','D','L',
+                                       'GF','GA','GD']]
+                    display = display.astype(
+                        {'Pts': int, 'W': int, 'D': int,
+                         'L': int, 'GF': int, 'GA': int}
+                    )
+                    st.dataframe(display, use_container_width=True)
+    except Exception as e:
+        st.error(f"Error: {e}")
+
+# ══════════════════════════════════════════════════════════════
+# PAGE 3 — MATCH PREDICTOR
+# ══════════════════════════════════════════════════════════════
+elif page == "🔮 Match Predictor":
+    st.title("🔮 Match Predictor")
+    st.markdown("Select any two teams to get a prediction.")
+    try:
+        col1, col2 = st.columns(2)
+        with col1:
+            home_team = st.selectbox("🏠 Home Team", ALL_TEAMS, index=0)
+        with col2:
+            away_team = st.selectbox("✈️ Away Team", ALL_TEAMS, index=1)
+
+        if home_team == away_team:
+            st.warning("Please select different teams!")
+        else:
+            if st.button("🔮 Predict", type="primary",
+                         use_container_width=True):
+                result = predict_match(
+                    home_team, away_team, team_strength_df,
+                    model_home, model_away, scaler, live_results
+                )
+                if result:
+                    st.markdown("---")
+                    c1, c2, c3 = st.columns(3)
+                    with c1:
+                        st.metric(
+                            f"{get_flag(home_team)} {home_team}",
+                            f"{result['prob_home_win']:.1%}",
+                            "Win probability"
+                        )
+                    with c2:
+                        st.metric(
+                            "Draw",
+                            f"{result['prob_draw']:.1%}",
+                            f"Predicted: {result['predicted_score'][0]}-{result['predicted_score'][1]}"
+                        )
+                    with c3:
+                        st.metric(
+                            f"{get_flag(away_team)} {away_team}",
+                            f"{result['prob_away_win']:.1%}",
+                            "Win probability"
+                        )
+                    st.markdown("---")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown("### Expected Goals")
+                        fig = go.Figure(go.Bar(
+                            x=[home_team, away_team],
+                            y=[result['lambda_home'],
+                               result['lambda_away']],
+                            marker_color=['#1a6b3c', '#c41e3a'],
+                            text=[f"{result['lambda_home']:.2f}",
+                                  f"{result['lambda_away']:.2f}"],
+                            textposition='outside'
+                        ))
+                        fig.update_layout(
+                            height=300,
+                            plot_bgcolor='rgba(0,0,0,0)',
+                            paper_bgcolor='rgba(0,0,0,0)',
+                            font_color='white',
+                            showlegend=False
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                    with col2:
+                        st.markdown("### Most Likely Scorelines")
+                        for (i, j), prob in result['top5_scorelines']:
+                            bar_width = int(prob * 200)
+                            st.markdown(
+                                f"**{i}-{j}** &nbsp;&nbsp; "
+                                f"`{'█' * bar_width}` "
+                                f"{prob:.1%}"
+                            )
+                    st.markdown("---")
+                    st.markdown("### Tournament Form")
+                    fc1, fc2 = st.columns(2)
+                    with fc1:
+                        hf = result['home_form']
+                        st.markdown(
+                            f"**{get_flag(home_team)} {home_team}**  \n"
+                            f"W{hf['form_wins']} "
+                            f"D{hf['form_draws']} "
+                            f"L{hf['form_losses']} | "
+                            f"GD: {hf['form_gd']:+d}"
+                        )
+                    with fc2:
+                        af = result['away_form']
+                        st.markdown(
+                            f"**{get_flag(away_team)} {away_team}**  \n"
+                            f"W{af['form_wins']} "
+                            f"D{af['form_draws']} "
+                            f"L{af['form_losses']} | "
+                            f"GD: {af['form_gd']:+d}"
+                        )
+    except Exception as e:
+        st.error(f"Error: {e}")
+
+# ══════════════════════════════════════════════════════════════
+# PAGE 4 — ENTER SCORES
+# ══════════════════════════════════════════════════════════════
+elif page == "⚽ Enter Scores":
+    st.title("⚽ Enter Match Results")
+    try:
+        if 'admin_auth' not in st.session_state:
+            st.session_state.admin_auth = False
