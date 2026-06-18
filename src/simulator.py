@@ -46,7 +46,7 @@ def simulate_knockout(home, away, team_strength_df,
 
 
 def run_simulation(team_strength_df, model_home, model_away,
-                   scaler, live_results, n_sims=5000):
+                   scaler, live_results, n_sims=500):
     """Run full tournament simulation."""
     all_teams = [t for teams in GROUPS.values() for t in teams]
     form_dict = {t: get_live_form(t, live_results) for t in all_teams}
