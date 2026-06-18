@@ -60,7 +60,7 @@ if page == "🏆 Predictions":
     with st.spinner("Running 5,000 simulations..."):
         sim_results = run_simulation(
             team_strength_df, model_home, model_away,
-            scaler, live_results, n_sims=5000
+            scaler, live_results, n_sims=500
         )
 
     top10 = sim_results.head(10).copy()
