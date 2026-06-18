@@ -1,21 +1,24 @@
 import pandas as pd
-import numpy as np
-from supabase import create_client
 import streamlit as st
 
 
 @st.cache_resource
 def get_supabase():
-    """Initialize Supabase client."""
-    url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_KEY"]
-    return create_client(url, key)
+    try:
+        from supabase import create_client
+        url = str(st.secrets["SUPABASE_URL"]).strip()
+        key = str(st.secrets["SUPABASE_KEY"]).strip()
+        return create_client(url, key)
+    except Exception as e:
+        st.error(f"Supabase connection error: {e}")
+        return None
 
 
 def load_results():
-    """Load all match results from Supabase."""
     try:
         sb = get_supabase()
+        if sb is None:
+            return {}
         response = sb.table('results').select('*').execute()
         results = {}
         for row in response.data:
@@ -33,14 +36,15 @@ def load_results():
 
 
 def save_result(home_team, away_team, home_score, away_score):
-    """Save a match result to Supabase."""
     try:
         sb = get_supabase()
+        if sb is None:
+            return False
         sb.table('results').upsert({
             'home_team' : home_team,
             'away_team' : away_team,
-            'home_score': home_score,
-            'away_score': away_score,
+            'home_score': int(home_score),
+            'away_score': int(away_score),
         }).execute()
         return True
     except Exception as e:
@@ -49,9 +53,10 @@ def save_result(home_team, away_team, home_score, away_score):
 
 
 def delete_result(home_team, away_team):
-    """Delete a result (for corrections)."""
     try:
         sb = get_supabase()
+        if sb is None:
+            return False
         sb.table('results')\
           .delete()\
           .eq('home_team', home_team)\
@@ -64,7 +69,6 @@ def delete_result(home_team, away_team):
 
 
 def get_group_standings(live_results, groups):
-    """Compute current group standings from results."""
     all_standings = {}
 
     for group, teams in groups.items():
