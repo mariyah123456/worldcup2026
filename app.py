@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import pickle
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -20,15 +19,8 @@ st.set_page_config(
 )
 
 # ── Load models ───────────────────────────────────────────────
-@st.cache_resource
-def load_models():
-    with open('model_home.pkl', 'rb') as f:
-        model_home = pickle.load(f)
-    with open('model_away.pkl', 'rb') as f:
-        model_away = pickle.load(f)
-    with open('scaler.pkl', 'rb') as f:
-        scaler = pickle.load(f)
-    return model_home, model_away, scaler
+from src.train import train_models
+model_home, model_away, scaler = train_models()
 
 @st.cache_data
 def load_team_strength():
