@@ -4,86 +4,94 @@ import urllib.request
 import urllib.parse
 import json
 
-
-def get_credentials():
-    bin_id = st.secrets["JSONBIN_BIN_ID"]
-    api_key = st.secrets["JSONBIN_API_KEY"]
-    return bin_id, api_key
+SHEET_ID = "1BkCnYwFkPx37zLOx82VHwwSBTLtm7zQfhquBl8Tlt5o"
+SHEET_NAME = "Sheet1"
 
 
 def load_results():
     try:
-        bin_id, api_key = get_credentials()
-        url = f"https://api.jsonbin.io/v3/b/{bin_id}/latest"
-        req = urllib.request.Request(
-            url,
-            headers={
-                "X-Master-Key": api_key,
-                "X-Bin-Meta": "false"
+        url = (f"https://docs.google.com/spreadsheets/d/"
+               f"{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}")
+        df = pd.read_csv(url)
+        df.columns = ['home_team', 'away_team',
+                      'home_score', 'away_score']
+        df = df.dropna(subset=['home_team', 'away_team'])
+        results = {}
+        for _, row in df.iterrows():
+            key = f"{row['home_team']}_vs_{row['away_team']}"
+            results[key] = {
+                'home_team' : str(row['home_team']),
+                'away_team' : str(row['away_team']),
+                'home_score': int(row['home_score']),
+                'away_score': int(row['away_score']),
             }
-        )
-        with urllib.request.urlopen(req) as response:
-            data = json.loads(
-                response.read().decode("utf-8"))
-        return data if isinstance(data, dict) else {}
+        return results
     except Exception as e:
         st.error(f"Error loading results: {e}")
         return {}
 
 
-def save_result(home_team, away_team,
-                home_score, away_score):
+def save_result(home_team, away_team, home_score, away_score):
     try:
-        # Load current results
+        # Load existing results
         results = load_results()
-
-        # Add new result
         key = f"{home_team}_vs_{away_team}"
-        results[key] = {
-            'home_team' : home_team,
-            'away_team' : away_team,
-            'home_score': int(home_score),
-            'away_score': int(away_score),
-        }
 
-        # Save back
-        bin_id, api_key = get_credentials()
-        url = f"https://api.jsonbin.io/v3/b/{bin_id}"
-        payload = json.dumps(results).encode("utf-8")
-        req = urllib.request.Request(
-            url,
-            data=payload,
-            headers={
-                "X-Master-Key": api_key,
-                "Content-Type": "application/json"
-            },
-            method="PUT"
-        )
-        with urllib.request.urlopen(req) as response:
-            return True
+        # Check if already exists
+        if key in results:
+            # Update via Apps Script
+            _update_sheet(home_team, away_team,
+                         home_score, away_score, update=True)
+        else:
+            _update_sheet(home_team, away_team,
+                         home_score, away_score, update=False)
+        return True
     except Exception as e:
         st.error(f"Error saving result: {e}")
         return False
 
 
+def _update_sheet(home_team, away_team,
+                  home_score, away_score, update=False):
+    """Use Google Apps Script to write to sheet."""
+    apps_script_url = st.secrets.get("APPS_SCRIPT_URL", "")
+    if not apps_script_url:
+        st.error("Apps Script URL not configured")
+        return False
+
+    payload = json.dumps({
+        'home_team' : home_team,
+        'away_team' : away_team,
+        'home_score': int(home_score),
+        'away_score': int(away_score),
+        'update'    : update
+    }).encode('utf-8')
+
+    req = urllib.request.Request(
+        apps_script_url,
+        data=payload,
+        headers={'Content-Type': 'application/json'},
+        method='POST'
+    )
+    with urllib.request.urlopen(req) as response:
+        return True
+
+
 def delete_result(home_team, away_team):
     try:
-        results = load_results()
-        key = f"{home_team}_vs_{away_team}"
-        if key in results:
-            del results[key]
-
-        bin_id, api_key = get_credentials()
-        url = f"https://api.jsonbin.io/v3/b/{bin_id}"
-        payload = json.dumps(results).encode("utf-8")
+        apps_script_url = st.secrets.get("APPS_SCRIPT_URL", "")
+        if not apps_script_url:
+            return False
+        payload = json.dumps({
+            'home_team': home_team,
+            'away_team': away_team,
+            'delete'   : True
+        }).encode('utf-8')
         req = urllib.request.Request(
-            url,
+            apps_script_url,
             data=payload,
-            headers={
-                "X-Master-Key": api_key,
-                "Content-Type": "application/json"
-            },
-            method="PUT"
+            headers={'Content-Type': 'application/json'},
+            method='POST'
         )
         with urllib.request.urlopen(req) as response:
             return True
@@ -94,23 +102,18 @@ def delete_result(home_team, away_team):
 
 def get_group_standings(live_results, groups):
     all_standings = {}
-
     for group, teams in groups.items():
         table = {t: {'W':0,'D':0,'L':0,'GF':0,'GA':0,'Pts':0}
                  for t in teams}
-
         for key, r in live_results.items():
             home = r['home_team']
             away = r['away_team']
             hg   = r['home_score']
             ag   = r['away_score']
-
             if home not in table or away not in table:
                 continue
-
             table[home]['GF'] += hg; table[home]['GA'] += ag
             table[away]['GF'] += ag; table[away]['GA'] += hg
-
             if hg > ag:
                 table[home]['W']+=1; table[home]['Pts']+=3
                 table[away]['L']+=1
@@ -120,11 +123,8 @@ def get_group_standings(live_results, groups):
             else:
                 table[home]['D']+=1; table[home]['Pts']+=1
                 table[away]['D']+=1; table[away]['Pts']+=1
-
         df = pd.DataFrame(table).T
         df['GD'] = df['GF'] - df['GA']
-        df = df.sort_values(['Pts','GD','GF'],
-                            ascending=False)
+        df = df.sort_values(['Pts','GD','GF'], ascending=False)
         all_standings[group] = df
-
     return all_standings
