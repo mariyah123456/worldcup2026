@@ -18,7 +18,8 @@ def load_results():
         df = df.dropna(subset=['home_team', 'away_team'])
         results = {}
         for _, row in df.iterrows():
-            key = f"{row['home_team']}_vs_{row['away_team']}"
+            round_val = str(row['round']) if 'round' in row.index else 'Group stage'
+            key = f"{row['home_team']}_vs_{row['away_team']}_{round_val}"
             results[key] = {
                 'home_team' : str(row['home_team']),
                 'away_team' : str(row['away_team']),
