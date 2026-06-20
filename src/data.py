@@ -36,7 +36,8 @@ def save_result(home_team, away_team, home_score, away_score, round_name='Group 
     try:
         # Load existing results
         results = load_results()
-        key = f"{home_team}_vs_{away_team}"
+        round_val = str(row['round']) if 'round' in df.columns else 'Group stage'
+        key = f"{row['home_team']}_vs_{row['away_team']}_{row.get('round', 'Group stage')}"
 
         # Check if already exists
         if key in results:
@@ -65,6 +66,7 @@ def _update_sheet(home_team, away_team,
         'away_team' : away_team,
         'home_score': int(home_score),
         'away_score': int(away_score),
+        'round'     : round_name,
         'update'    : update
     }).encode('utf-8')
 
