@@ -258,7 +258,7 @@ elif page == "⚽ Enter Scores":
         else:
             st.success("✓ Logged in as admin")
          
-          st.markdown("### Add / Update Result")
+            st.markdown("### Add / Update Result")
         ROUNDS = [
             'Group stage', 'Round of 32', 'Round of 16',
             'Quarter-final', 'Semi-final',
