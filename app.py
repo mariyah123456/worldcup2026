@@ -257,30 +257,38 @@ elif page == "⚽ Enter Scores":
                     st.error("Incorrect password")
         else:
             st.success("✓ Logged in as admin")
-            st.markdown("### Add / Update Result")
-            c1, c2 = st.columns(2)
-            with c1:
-                home = st.selectbox("Home Team", ALL_TEAMS,
-                                    key="entry_home")
-                home_goals = st.number_input(
-                    "Home Goals", min_value=0, max_value=20, value=0)
-            with c2:
-                away = st.selectbox("Away Team", ALL_TEAMS,
-                                    key="entry_away", index=1)
-                away_goals = st.number_input(
-                    "Away Goals", min_value=0, max_value=20, value=0)
-
-            if st.button("💾 Save Result", type="primary",
-                         use_container_width=True):
-                if home == away:
-                    st.error("Home and away must be different!")
-                else:
-                    if save_result(home, away, home_goals, away_goals):
-                        st.session_state.results = load_results()
-                        st.success(
-                            f"✓ Saved: {home} {home_goals}-{away_goals} {away}"
-                        )
-                        st.rerun()
+         
+          st.markdown("### Add / Update Result")
+        ROUNDS = [
+            'Group stage', 'Round of 32', 'Round of 16',
+            'Quarter-final', 'Semi-final',
+            'Third place', 'Final'
+        ]
+        round_selected = st.selectbox(
+            "Round", ROUNDS, key="entry_round")
+        c1, c2 = st.columns(2)
+        with c1:
+            home = st.selectbox("Home Team", ALL_TEAMS,
+                                key="entry_home")
+            home_goals = st.number_input(
+                "Home Goals", min_value=0, max_value=20, value=0)
+        with c2:
+            away = st.selectbox("Away Team", ALL_TEAMS,
+                                key="entry_away", index=1)
+            away_goals = st.number_input(
+                "Away Goals", min_value=0, max_value=20, value=0)
+          
+        if st.button("💾 Save Result", type="primary",
+                     use_container_width=True):
+            if home == away:
+                st.error("Home and away must be different!")
+            else:
+                if save_result(home, away, home_goals, away_goals, round_selected):
+                    st.session_state.results = load_results()
+                    st.success(
+                        f"✓ Saved: {home} {home_goals}-{away_goals} {away}"
+                    )
+                    st.rerun()
 
             st.markdown("---")
             st.markdown("### Results Entered")
