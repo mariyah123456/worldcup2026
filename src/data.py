@@ -32,7 +32,7 @@ def load_results():
         return {}
 
 
-def save_result(home_team, away_team, home_score, away_score):
+def save_result(home_team, away_team, home_score, away_score, round_name='Group stage'):
     try:
         # Load existing results
         results = load_results()
