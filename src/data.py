@@ -14,7 +14,7 @@ def load_results():
                f"{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}")
         df = pd.read_csv(url)
         df.columns = ['home_team', 'away_team',
-                      'home_score', 'away_score']
+                      'home_score', 'away_score','round']
         df = df.dropna(subset=['home_team', 'away_team'])
         results = {}
         for _, row in df.iterrows():
