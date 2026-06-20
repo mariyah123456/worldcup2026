@@ -7,30 +7,38 @@ import json
 SHEET_ID = "1BkCnYwFkPx37zLOx82VHwwSBTLtm7zQfhquBl8Tlt5o"
 SHEET_NAME = "Sheet1"
 
-
 def load_results():
     try:
         url = (f"https://docs.google.com/spreadsheets/d/"
                f"{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}")
         df = pd.read_csv(url)
-        df.columns = ['home_team', 'away_team',
-                      'home_score', 'away_score','round']
+        
+        # Handle both 4 and 5 column versions
+        if len(df.columns) == 5:
+            df.columns = ['home_team', 'away_team',
+                         'home_score', 'away_score', 'round']
+        else:
+            df.columns = ['home_team', 'away_team',
+                         'home_score', 'away_score']
+            df['round'] = 'Group stage'
+            
         df = df.dropna(subset=['home_team', 'away_team'])
         results = {}
         for _, row in df.iterrows():
-            round_val = str(row['round']) if 'round' in row.index else 'Group stage'
-            key = f"{row['home_team']}_vs_{row['away_team']}_{round_val}"
+            key = (f"{row['home_team']}_vs_"
+                   f"{row['away_team']}_"
+                   f"{row.get('round', 'Group stage')}")
             results[key] = {
                 'home_team' : str(row['home_team']),
                 'away_team' : str(row['away_team']),
                 'home_score': int(row['home_score']),
                 'away_score': int(row['away_score']),
+                'round'     : str(row.get('round', 'Group stage')),
             }
         return results
     except Exception as e:
         st.error(f"Error loading results: {e}")
         return {}
-
 
 def save_result(home_team, away_team, home_score, away_score, round_name='Group stage'):
     try:
