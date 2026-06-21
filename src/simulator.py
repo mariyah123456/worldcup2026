@@ -6,7 +6,7 @@ from src.model import get_live_form, FEATURES
 
 
 def simulate_match(home_team, away_team, team_strength_df,
-    model_home, model_away, scaler, form_dict=None):
+model_home, model_away, scaler, form_dict=None):
     home_row = team_strength_df[team_strength_df['team'] == home_team]
     away_row = team_strength_df[team_strength_df['team'] == away_team]
     if len(home_row) == 0 or len(away_row) == 0:
