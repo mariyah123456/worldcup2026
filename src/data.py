@@ -7,66 +7,28 @@ import json
 SHEET_ID = "1BkCnYwFkPx37zLOx82VHwwSBTLtm7zQfhquBl8Tlt5o"
 SHEET_NAME = "Sheet1"
 
+
 def load_results():
     try:
-        url = (f"https://docs.google.com/spreadsheets/d/"
-               f"{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}")
-        df = pd.read_csv(url)
-        
-        # Handle both 4 and 5 column versions
-        if len(df.columns) == 5:
-            df.columns = ['home_team', 'away_team',
-                         'home_score', 'away_score', 'round']
-        else:
-            df.columns = ['home_team', 'away_team',
-                         'home_score', 'away_score']
-            df['round'] = 'Group stage'
-            
-        df = df.dropna(subset=['home_team', 'away_team'])
-        results = {}
-        for _, row in df.iterrows():
-            key = (f"{row['home_team']}_vs_"
-                   f"{row['away_team']}_"
-                   f"{row.get('round', 'Group stage')}")
-            results[key] = {
-                'home_team' : str(row['home_team']),
-                'away_team' : str(row['away_team']),
-                'home_score': int(row['home_score']),
-                'away_score': int(row['away_score']),
-                'round'     : str(row.get('round', 'Group stage')),
-            }
-        return results
-    except Exception as e:
-        st.error(f"Error loading results: {e}")
-        return {}
-
-def save_result(home_team, away_team, home_score, away_score, round_name='Group stage'):
-    try:
-        # Load existing results
-        results = load_results()
-
-        def load_results():
-    try:
-        url = (f"https://docs.google.com/spreadsheets/d/"
-               f"{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}")
+        url = (
+            f"https://docs.google.com/spreadsheets/d/"
+            f"{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}"
+        )
         df = pd.read_csv(url)
 
-        # Handle both 4 and 5 column versions
         if len(df.columns) >= 5:
             df.columns = ['home_team', 'away_team',
-                         'home_score', 'away_score', 'round']
+                          'home_score', 'away_score', 'round']
         else:
             df.columns = ['home_team', 'away_team',
-                         'home_score', 'away_score']
+                          'home_score', 'away_score']
             df['round'] = 'Group stage'
 
         df = df.dropna(subset=['home_team', 'away_team'])
-        
+
         results = {}
         for _, row in df.iterrows():
-            round_val = str(row['round']) \
-                        if 'round' in df.columns \
-                        else 'Group stage'
+            round_val = str(row['round'])
             key = (f"{row['home_team']}_vs_"
                    f"{row['away_team']}_"
                    f"{round_val}")
@@ -81,15 +43,18 @@ def save_result(home_team, away_team, home_score, away_score, round_name='Group 
     except Exception as e:
         st.error(f"Error loading results: {e}")
         return {}
-        
-        # Check if already exists
-        if key in results:
-            # Update via Apps Script
-            _update_sheet(home_team, away_team,
-                         home_score, away_score, update=True)
-        else:
-            _update_sheet(home_team, away_team,
-                         home_score, away_score, update=False)
+
+
+def save_result(home_team, away_team,
+                home_score, away_score,
+                round_name='Group stage'):
+    try:
+        results = load_results()
+        key = f"{home_team}_vs_{away_team}_{round_name}"
+        update = key in results
+        _update_sheet(home_team, away_team,
+                      home_score, away_score,
+                      round_name, update)
         return True
     except Exception as e:
         st.error(f"Error saving result: {e}")
@@ -97,8 +62,8 @@ def save_result(home_team, away_team, home_score, away_score, round_name='Group 
 
 
 def _update_sheet(home_team, away_team,
-                  home_score, away_score, update=False):
-    """Use Google Apps Script to write to sheet."""
+                  home_score, away_score,
+                  round_name, update=False):
     apps_script_url = st.secrets.get("APPS_SCRIPT_URL", "")
     if not apps_script_url:
         st.error("Apps Script URL not configured")
@@ -123,7 +88,7 @@ def _update_sheet(home_team, away_team,
         return True
 
 
-def delete_result(home_team, away_team):
+def delete_result(home_team, away_team, round_name='Group stage'):
     try:
         apps_script_url = st.secrets.get("APPS_SCRIPT_URL", "")
         if not apps_script_url:
@@ -131,6 +96,7 @@ def delete_result(home_team, away_team):
         payload = json.dumps({
             'home_team': home_team,
             'away_team': away_team,
+            'round'    : round_name,
             'delete'   : True
         }).encode('utf-8')
         req = urllib.request.Request(
@@ -158,17 +124,23 @@ def get_group_standings(live_results, groups):
             ag   = r['away_score']
             if home not in table or away not in table:
                 continue
-            table[home]['GF'] += hg; table[home]['GA'] += ag
-            table[away]['GF'] += ag; table[away]['GA'] += hg
+            table[home]['GF'] += hg
+            table[home]['GA'] += ag
+            table[away]['GF'] += ag
+            table[away]['GA'] += hg
             if hg > ag:
-                table[home]['W']+=1; table[home]['Pts']+=3
-                table[away]['L']+=1
+                table[home]['W'] += 1
+                table[home]['Pts'] += 3
+                table[away]['L'] += 1
             elif hg < ag:
-                table[away]['W']+=1; table[away]['Pts']+=3
-                table[home]['L']+=1
+                table[away]['W'] += 1
+                table[away]['Pts'] += 3
+                table[home]['L'] += 1
             else:
-                table[home]['D']+=1; table[home]['Pts']+=1
-                table[away]['D']+=1; table[away]['Pts']+=1
+                table[home]['D'] += 1
+                table[home]['Pts'] += 1
+                table[away]['D'] += 1
+                table[away]['Pts'] += 1
         df = pd.DataFrame(table).T
         df['GD'] = df['GF'] - df['GA']
         df = df.sort_values(['Pts','GD','GF'], ascending=False)
