@@ -7,7 +7,7 @@ import json
 SHEET_ID = "1BkCnYwFkPx37zLOx82VHwwSBTLtm7zQfhquBl8Tlt5o"
 SHEET_NAME = "Sheet1"
 
-    def load_results():
+def load_results():
     try:
         url = (f"https://docs.google.com/spreadsheets/d/"
                f"{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}")
