@@ -35,7 +35,6 @@ def simulate_match(home_team, away_team, team_strength_df,
     la = model_away.predict(scaler.transform(feat))[0]
     return int(np.random.poisson(lh)), int(np.random.poisson(la))
 
-
 def simulate_knockout(home, away, team_strength_df,
                       model_home, model_away, scaler, form_dict=None):
     hg, ag = simulate_match(home, away, team_strength_df,
