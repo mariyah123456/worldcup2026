@@ -57,14 +57,14 @@ if page == "🏆 Predictions":
     st.title("🏆 FIFA World Cup 2026 — Tournament Predictions")
     st.markdown(f"*Based on {len(live_results)} real match results*")
 
-     progress_bar = st.progress(0, text="Running simulations...")
-        sim_results = run_simulation(
-            team_strength_df, model_home, model_away,
-            scaler, live_results, n_sims=500
-            progress_bar=progress_bar
-        )
-        progress_bar.empty()
-  
+    progress_bar = st.progress(0, text="Running simulations...")
+    sim_results = run_simulation(
+        team_strength_df, model_home, model_away,
+        scaler, live_results, n_sims=500,
+        progress_bar=progress_bar
+    )
+    progress_bar.empty()
+
     top10 = sim_results.head(10).copy()
     top10['label'] = top10['team'].apply(
         lambda t: f"{get_flag(t)} {t}"
