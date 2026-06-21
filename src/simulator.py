@@ -4,7 +4,6 @@ from scipy.stats import poisson
 from src.groups import GROUPS
 from src.model import get_live_form, FEATURES
 
-
 def simulate_match(home_team, away_team, team_strength_df,
                    model_home, model_away, scaler, form_dict=None):
     home_row = team_strength_df[team_strength_df['team'] == home_team]
