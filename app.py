@@ -293,8 +293,8 @@ elif page == "⚽ Enter Scores":
             st.markdown("---")
             st.markdown("### Results Entered")
         
-        if live_results:
-        for key, r in live_results.items():
+if live_results:
+    for key, r in live_results.items():
         col1, col2 = st.columns([4, 1])
         with col1:
             hg = r['home_score']
@@ -324,6 +324,6 @@ elif page == "⚽ Enter Scores":
                 st.session_state.results = load_results()
                 st.rerun()
 else:
-    st.info("No results entered yet.")                  
+    st.info("No results entered yet.")             
                        
 
