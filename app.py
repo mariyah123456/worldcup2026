@@ -293,35 +293,36 @@ elif page == "⚽ Enter Scores":
             st.markdown("---")
             st.markdown("### Results Entered")
             if live_results:
-                for key, r in live_results.items():
-                    col1, col2 = st.columns([4, 1])
-                    with col1:
-                        hg = r['home_score']
-                        ag = r['away_score']
-                        result_str = (
-                            "🟢 HOME" if hg > ag else
-                            "🔴 AWAY" if hg < ag else
-                            "🟡 DRAW"
-                        )
-                        st.markdown(
-                            f"{get_flag(r['home_team'])} "
-                            f"**{r['home_team']}** "
-                            f"{hg}–{ag} "
-                            f"**{r['away_team']}** "
-                            f"{get_flag(r['away_team'])} "
-                            f"— {result_str}"
-                        )
-                    with col2:
-                        if st.button("🗑️", key=f"del_{key}"):
-                            delete_result(r['home_team'],
-                                          r['away_team'])
-                            st.session_state.results = load_results()
-                            st.rerun()
-            else:
-                st.info("No results entered yet.")
-
-            if st.button("🚪 Logout"):
-                st.session_state.admin_auth = False
+    for key, r in live_results.items():
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            hg = r['home_score']
+            ag = r['away_score']
+            round_val = r.get('round', 'Group stage')
+            result_str = (
+                "🟢 HOME" if hg > ag else
+                "🔴 AWAY" if hg < ag else
+                "🟡 DRAW"
+            )
+            st.markdown(
+                f"{get_flag(r['home_team'])} "
+                f"**{r['home_team']}** "
+                f"{hg}–{ag} "
+                f"**{r['away_team']}** "
+                f"{get_flag(r['away_team'])} "
+                f"— {result_str} "
+                f"*({round_val})*"
+            )
+        with col2:
+            if st.button("🗑️", key=f"del_{key}"):
+                delete_result(
+                    r['home_team'],
+                    r['away_team'],
+                    r.get('round', 'Group stage')
+                )
+                st.session_state.results = load_results()
                 st.rerun()
-    except Exception as e:
-        st.error(f"Error: {e}")
+else:
+    st.info("No results entered yet.")                  
+                       
+
