@@ -44,9 +44,44 @@ def save_result(home_team, away_team, home_score, away_score, round_name='Group 
     try:
         # Load existing results
         results = load_results()
-        round_val = str(row['round']) if 'round' in df.columns else 'Group stage'
-        key = f"{row['home_team']}_vs_{row['away_team']}_{row.get('round', 'Group stage')}"
 
+        def load_results():
+    try:
+        url = (f"https://docs.google.com/spreadsheets/d/"
+               f"{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}")
+        df = pd.read_csv(url)
+
+        # Handle both 4 and 5 column versions
+        if len(df.columns) >= 5:
+            df.columns = ['home_team', 'away_team',
+                         'home_score', 'away_score', 'round']
+        else:
+            df.columns = ['home_team', 'away_team',
+                         'home_score', 'away_score']
+            df['round'] = 'Group stage'
+
+        df = df.dropna(subset=['home_team', 'away_team'])
+        
+        results = {}
+        for _, row in df.iterrows():
+            round_val = str(row['round']) \
+                        if 'round' in df.columns \
+                        else 'Group stage'
+            key = (f"{row['home_team']}_vs_"
+                   f"{row['away_team']}_"
+                   f"{round_val}")
+            results[key] = {
+                'home_team' : str(row['home_team']),
+                'away_team' : str(row['away_team']),
+                'home_score': int(row['home_score']),
+                'away_score': int(row['away_score']),
+                'round'     : round_val,
+            }
+        return results
+    except Exception as e:
+        st.error(f"Error loading results: {e}")
+        return {}
+        
         # Check if already exists
         if key in results:
             # Update via Apps Script
