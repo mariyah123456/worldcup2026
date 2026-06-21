@@ -293,7 +293,7 @@ elif page == "⚽ Enter Scores":
             st.markdown("---")
             st.markdown("### Results Entered")
             if live_results:
-    for key, r in live_results.items():
+        for key, r in live_results.items():
         col1, col2 = st.columns([4, 1])
         with col1:
             hg = r['home_score']
