@@ -6,11 +6,17 @@ from src.model import get_live_form, FEATURES
 
 
 def simulate_match(home_team, away_team, team_strength_df,
-model_home, model_away, scaler, form_dict=None):
+                   model_home, model_away, scaler, form_dict=None):
     home_row = team_strength_df[team_strength_df['team'] == home_team]
     away_row = team_strength_df[team_strength_df['team'] == away_team]
+    
     if len(home_row) == 0 or len(away_row) == 0:
         return 1, 1
+
+    elo_diff = (
+        home_row['blended_elo'].values[0] -
+        away_row['blended_elo'].values[0]
+    )
 
     elo_diff = (home_row['blended_elo'].values[0] -
                 away_row['blended_elo'].values[0])
